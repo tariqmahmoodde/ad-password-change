@@ -2,17 +2,31 @@ from flask import Flask, render_template, request, redirect, flash
 from ldap3 import Server, Connection, ALL, SIMPLE, Tls
 import ssl
 from ldap3.core.exceptions import LDAPBindError, LDAPException
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from a .env file for local development
+load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = 'supersecret'  # move to env var in production
+# It's highly recommended to set the SECRET_KEY in your environment for production.
+app.secret_key = os.getenv('SECRET_KEY', 'a-default-secret-key-for-dev')
 
-# Active Directory configuration
-AD_SERVER_IP = '172.30.20.200'
-AD_DOMAIN = 'OCTA'
-AD_FQDN = 'octa.local'
-AD_ADMIN_USER = f'{AD_DOMAIN}\\Administrator'
-AD_ADMIN_PASS = 'ShineSt@r#'
-SEARCH_BASE = 'DC=octa,DC=local'
+
+# Active Directory configuration from environment variables
+AD_SERVER_IP = os.getenv('AD_SERVER_IP')
+AD_DOMAIN = os.getenv('AD_DOMAIN')
+AD_FQDN = os.getenv('AD_FQDN')
+AD_ADMIN_USERNAME = os.getenv('AD_ADMIN_USERNAME', 'Administrator')
+AD_ADMIN_PASS = os.getenv('AD_ADMIN_PASS')
+
+# Check if critical variables are set, otherwise raise an error
+if not all([AD_SERVER_IP, AD_DOMAIN, AD_FQDN, AD_ADMIN_PASS]):
+    raise ValueError("Please set required environment variables: AD_SERVER_IP, AD_DOMAIN, AD_FQDN, AD_ADMIN_PASS.")
+
+# Construct derived configuration values
+AD_ADMIN_USER = f'{AD_DOMAIN}\\{AD_ADMIN_USERNAME}'
+SEARCH_BASE = f"DC={AD_FQDN.replace('.', ',DC=')}"
 
 tls_configuration = Tls(validate=ssl.CERT_NONE)
 
